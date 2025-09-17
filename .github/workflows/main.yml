@@ -5,17 +5,14 @@ on:
 
 jobs:
   secure-rdp:
-    runs-on: self-hosted   # Apna Windows self-hosted runner use karein
+    runs-on: self-hosted   # Windows self-hosted runner chahiye
     timeout-minutes: 3600
 
     steps:
       - name: Enable RDP
         run: |
-          # Enable Remote Desktop
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
-          # Allow firewall rule for RDP
           netsh advfirewall firewall add rule name="RDP" dir=in action=allow protocol=TCP localport=3389
-          # Restart RDP service
           Restart-Service -Name TermService -Force
 
       - name: Create RDP User
@@ -36,16 +33,19 @@ jobs:
           $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
           $installerPath = "$env:TEMP\tailscale.msi"
           Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
-          msiexec.exe /i "$installerPath" /quiet /norestart
+          # ✅ yahan direct msiexec.exe call use karna hai (NO Start-Process)
+          Start-Process "msiexec.exe" -ArgumentList "/i `"$installerPath`" /quiet /norestart" -Wait
           Remove-Item $installerPath -Force
 
       - name: Connect to Tailscale
+        shell: powershell
         run: |
           & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-rdp-${{ github.run_id }}
           $tsIP = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
           echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
 
       - name: Show RDP Info
+        shell: powershell
         run: |
           Write-Host "============================="
           Write-Host "✅ RDP is enabled!"
@@ -53,7 +53,6 @@ jobs:
           Write-Host "Username: $env:RDP_USERNAME"
           Write-Host "Password: $env:RDP_PASSWORD"
           Write-Host "============================="
-          Write-Host "`nKeep this workflow running to maintain connection."
           while ($true) {
             Write-Host "[$(Get-Date)] RDP Active..."
             Start-Sleep -Seconds 300
