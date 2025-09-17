@@ -5,7 +5,7 @@ on:
 
 jobs:
   secure-rdp:
-    runs-on: self-hosted   # Apna self-hosted Windows runner use karein
+    runs-on: self-hosted   # Apna Windows self-hosted runner use karein
     timeout-minutes: 3600
 
     steps:
@@ -35,7 +35,7 @@ jobs:
           $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi"
           $installerPath = "$env:TEMP\tailscale.msi"
           Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
-          Start-Process msiexec.exe -ArgumentList @("/i", "$installerPath", "/quiet", "/norestart") -Wait
+          Start-Process -FilePath "msiexec.exe" -ArgumentList "/i", $installerPath, "/quiet", "/norestart" -Wait
           Remove-Item $installerPath -Force
 
       - name: Connect to Tailscale
@@ -56,19 +56,4 @@ jobs:
           while ($true) {
             Write-Host "[$(Get-Date)] RDP Active..."
             Start-Sleep -Seconds 300
-          }          Remove-Item $installerPath -Force
-
-      - name: Connect to Tailscale
-        run: |
-          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-rdp-${{ github.run_id }}
-          $tsIP = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
-          echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
-
-      - name: Show RDP Info
-        run: |
-          Write-Host "============================="
-          Write-Host "✅ RDP is enabled!"
-          Write-Host "Tailscale IP: $env:TAILSCALE_IP"
-          Write-Host "Username: RDP"
-          Write-Host "Password: $env:RDP_Password"
-          Write-Host "============================="
+          }
